@@ -171,7 +171,14 @@ public class ServerGUI extends javax.swing.JFrame implements Runnable{
             clients.add(cr);
             //JList userOnline
             for(int i = 0 ; i < clients.size() ; i++) {
-            	System.out.println(clients.get(i).getUsername());
+                //clients.get(i).getWriter().println(clients.size());
+                //clients.get(i).getWriter().flush();
+                for(int j = 0; j < clients.size(); j++){
+                    String user = "~user~";
+                    clients.get(i).getWriter().println(user.concat(clients.get(j).getUsername()));
+                    clients.get(i).getWriter().flush();
+                }
+            	
             }
             
 	    }
