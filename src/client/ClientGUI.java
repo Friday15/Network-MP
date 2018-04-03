@@ -7,8 +7,13 @@ package client;
 
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.InputStream;
 import java.net.Socket;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 
@@ -23,6 +28,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     private final String ipAddress;
     private final int portnum;
     private Thread guiThread;
+    private Socket socket;
     private boolean sent = false;
     /**
      * Creates new form ClientGUI
@@ -40,8 +46,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         guiThread = new Thread(this);
         guiThread.start();       
         
-        
-        userOnline.setEditable(false);
+       
         serverChat.setEditable(false);
         
     }
@@ -59,13 +64,13 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         messageSend = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
         buttonLogout = new javax.swing.JButton();
-        createMessage = new javax.swing.JButton();
+        privateMessage = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
         nameOfUsers = new javax.swing.JComboBox<>();
         jScrollPane1 = new javax.swing.JScrollPane();
         serverChat = new javax.swing.JTextArea();
         jScrollPane2 = new javax.swing.JScrollPane();
-        userOnline = new javax.swing.JTextArea();
+        userOnline = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
@@ -89,10 +94,10 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
             }
         });
 
-        createMessage.setText("Private Message");
-        createMessage.addActionListener(new java.awt.event.ActionListener() {
+        privateMessage.setText("Private Message");
+        privateMessage.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                createMessageActionPerformed(evt);
+                privateMessageActionPerformed(evt);
             }
         });
 
@@ -111,8 +116,8 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         jScrollPane2.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane2.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 
-        userOnline.setColumns(20);
-        userOnline.setRows(5);
+        userOnline.setAlignmentX(0.5F);
+        userOnline.setLayout(new javax.swing.BoxLayout(userOnline, javax.swing.BoxLayout.Y_AXIS));
         jScrollPane2.setViewportView(userOnline);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -125,7 +130,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(messageSend)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(createMessage)
+                        .addComponent(privateMessage)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(50, 50, 50)
@@ -171,7 +176,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(messageSend)
-                    .addComponent(createMessage)
+                    .addComponent(privateMessage)
                     .addComponent(nameOfUsers, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
@@ -186,18 +191,23 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         
     }//GEN-LAST:event_messageSendActionPerformed
 
-    private void createMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createMessageActionPerformed
+    private void privateMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_privateMessageActionPerformed
         // TODO add your handling code here:
         /*
         jComboBox to select a username to chat with, then use that name to open PrivateMessageGUI();
         */
-        String chosenUser = nameOfUsers.getSelectedItem().toString();
-        new PrivateMessageGUI(chosenUser).setVisible(true);
-    }//GEN-LAST:event_createMessageActionPerformed
+        //String chosenUser = userOnline.getSelectedValue();
+        //new PrivateMessageGUI(chosenUser).setVisible(true);
+    }//GEN-LAST:event_privateMessageActionPerformed
 
     private void buttonLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonLogoutActionPerformed
-        // TODO add your handling code here:
-        //servGUI.globalServer.append(username + " logged out! \n");
+        try {
+            // TODO add your handling code here:
+            //servGUI.globalServer.append(username + " logged out! \n");
+            this.socket.close();
+        } catch (IOException ex) {
+            Logger.getLogger(ClientGUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
         this.dispose();
         System.exit(1);
         cmGUI.setVisible(true);
@@ -208,7 +218,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     	try {
                 System.out.println("initializing");
                 //userOnline.append(username);
-		Socket socket = new Socket(ipAddress, portnum);
+		this.socket = new Socket(ipAddress, portnum);
                 //ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 //oos.writeObject(this);
 		Thread.sleep(1000);
@@ -218,6 +228,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
                 
                 servAccessThread.start();
 		
+                
                 while(servAccessThread.isAlive()){
 
                     if(sent == true){                                   //should put a "marker" in front of the message so server can parse it and check where to send
@@ -281,22 +292,22 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         return serverChat;
     }
     
-    public JTextArea getUserOnline(){
+    public JPanel getUserOnline(){
         return userOnline;
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonLogout;
     private javax.swing.JTextField chatfieldBox;
-    private javax.swing.JButton createMessage;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JButton messageSend;
     private javax.swing.JComboBox<String> nameOfUsers;
+    private javax.swing.JButton privateMessage;
     private javax.swing.JTextArea serverChat;
-    private javax.swing.JTextArea userOnline;
+    private javax.swing.JPanel userOnline;
     // End of variables declaration//GEN-END:variables
 
     @Override
