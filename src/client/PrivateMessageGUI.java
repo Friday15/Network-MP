@@ -5,19 +5,37 @@
  */
 package client;
 
+import java.io.IOException;
+import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JTextArea;
+
 /**
  *
  * @author Paolo Delos Reyes, Richard Ingles, and Emir Mendoza
  */
-public class PrivateMessageGUI extends javax.swing.JFrame {
+public class PrivateMessageGUI extends javax.swing.JFrame implements Runnable{
     
     private final String recipient;
+    private final String username;
+    private Socket socket;
+    private Thread guiThread;
+    private boolean sent = false;
     /**
      * Creates new form PrivateMessageGUI
      */
-    public PrivateMessageGUI(String recipient) {
+    public PrivateMessageGUI(String username, String recipient, Socket socket) {
+        this.username = username;
         this.recipient = recipient;
+        this.socket = socket;
         initComponents();
+        
+        guiThread = new Thread(this);
+        guiThread.start();       
+        
+       
+        pmChat.setEditable(false);
     }
 
     /**
@@ -31,10 +49,10 @@ public class PrivateMessageGUI extends javax.swing.JFrame {
 
         jLabel1 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        privateClient = new javax.swing.JTextArea();
-        pmTextField = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        pmChat = new javax.swing.JTextArea();
+        chatFieldBox = new javax.swing.JTextField();
+        sendButton = new javax.swing.JButton();
+        closeButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setName("usernameSelected"); // NOI18N
@@ -43,16 +61,21 @@ public class PrivateMessageGUI extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Times New Roman", 1, 48)); // NOI18N
         jLabel1.setText("REP MESSENGER");
 
-        privateClient.setColumns(20);
-        privateClient.setRows(5);
-        jScrollPane1.setViewportView(privateClient);
+        pmChat.setColumns(20);
+        pmChat.setRows(5);
+        jScrollPane1.setViewportView(pmChat);
 
-        jButton1.setText("Send");
-
-        jButton2.setText("Close");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        sendButton.setText("Send");
+        sendButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                sendButtonActionPerformed(evt);
+            }
+        });
+
+        closeButton.setText("Close");
+        closeButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                closeButtonActionPerformed(evt);
             }
         });
 
@@ -72,11 +95,11 @@ public class PrivateMessageGUI extends javax.swing.JFrame {
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                                 .addGap(10, 10, 10)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(pmTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(chatFieldBox, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jButton1)
+                                        .addComponent(sendButton)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(jButton2)))))
+                                        .addComponent(closeButton)))))
                         .addContainerGap(20, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
@@ -87,22 +110,69 @@ public class PrivateMessageGUI extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 451, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(pmTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(chatFieldBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton2)
-                    .addComponent(jButton1))
+                    .addComponent(closeButton)
+                    .addComponent(sendButton))
                 .addContainerGap(19, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+    private void closeButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
         // TODO add your handling code here:
         this.dispose();
-    }//GEN-LAST:event_jButton2ActionPerformed
+    }//GEN-LAST:event_closeButtonActionPerformed
 
+    private void sendButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sendButtonActionPerformed
+        sent = true;
+    }//GEN-LAST:event_sendButtonActionPerformed
+
+    private void initializeClient(String username, String recipient){
+    	try {
+                System.out.println("initializing");
+                //userOnline.append(username);
+                //ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                //oos.writeObject(this);
+		Thread.sleep(1000);
+                
+		PrivateMessageThread msgThread = new PrivateMessageThread(socket, username, this);
+                Thread servAccessThread = new Thread(msgThread);
+                
+                servAccessThread.start();                   
+                System.out.println("before String builder");
+                while(servAccessThread.isAlive()){                    
+                    
+                    if(sent == true){                                   //should put a "marker" in front of the message so server can parse it and check where to send
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("/w/");
+                        sb.append(chatFieldBox.getText());
+                        sb.append("~");
+                        sb.append(recipient);
+                        
+                        msgThread.addNextMessage(sb.toString());   // /w/ (whisper) /g/ (group) or /a/ (all)
+                        chatFieldBox.setText("");
+                        sent = false;
+                    }
+                
+                }
+    		
+        }catch(InterruptedException e){
+        
+            e.printStackTrace();
+        }finally{
+                try {
+                    System.out.println("closing timeeee yeet");
+                    socket.close();
+                    
+                } catch (IOException ex) {
+                    Logger.getLogger(ClientGUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
+        }
+    	
+    }
     /**
      * @param args the command line arguments
      */
@@ -138,12 +208,21 @@ public class PrivateMessageGUI extends javax.swing.JFrame {
 //        });
 //    }
 
+    public JTextArea getPMChat(){
+        return this.pmChat;
+    }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
+    private javax.swing.JTextField chatFieldBox;
+    private javax.swing.JButton closeButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTextField pmTextField;
-    private javax.swing.JTextArea privateClient;
+    private javax.swing.JTextArea pmChat;
+    private javax.swing.JButton sendButton;
     // End of variables declaration//GEN-END:variables
+
+    @Override
+    public void run() {
+        initializeClient(this.username, this.recipient);
+    }
 }

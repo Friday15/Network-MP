@@ -1,29 +1,36 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package client;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 
-
-public class MessageThread implements Runnable {
-	private Socket socket;
+/**
+ *
+ * @author Ashen One
+ */
+public class PrivateMessageThread implements Runnable{
+        private Socket socket;
 	private String userName;
 	private final LinkedList<String> messageToSend;
 	private boolean hasMessage = false;
-	private ClientGUI gui;
-        private final ArrayList <String> users;
+	private PrivateMessageGUI gui;
         
-	public MessageThread(Socket socket, String userName, ClientGUI gui) {
+	public PrivateMessageThread(Socket socket, String userName, PrivateMessageGUI gui) {
 		this.socket = socket;
 		this.userName = userName;
                 this.gui = gui;
-                users = new ArrayList();
 		messageToSend = new LinkedList<>();
 	}
 	
@@ -36,17 +43,7 @@ public class MessageThread implements Runnable {
 	
 	@Override
 	public void run() {
-		System.out.println("Welcome: " + userName);
-		
-		System.out.println("xD Beep Local Port: " + socket.getLocalPort());
-		try{
-                    PrintWriter serverOut = new PrintWriter(socket.getOutputStream(), false);
-                    serverOut.println(userName);    //send username to server xd
-                    serverOut.flush();
-                    System.out.println("potato butthead");                    
-                }catch(IOException iex){
-                    iex.printStackTrace();
-                }
+
                 
                 //try{
 //                    InputStream input = socket.getInputStream();
@@ -78,29 +75,8 @@ public class MessageThread implements Runnable {
 				if (serverInStream.available() > 0) {
 					if(serverIn.hasNextLine()) {
                                             String readInput = serverIn.nextLine();
-                                            
-                                            if(readInput.contains("~user~")){
-                                                String actualUser = readInput.substring(6);
-                                                
-                                                if(!users.contains(actualUser)){
-                                                    users.add(actualUser);
-                                                    System.out.println("added user to list " + actualUser);
-                                                    
-                                                    gui.getListModel().addElement(actualUser);
-//                                                    JButton item = new JButton();
-//                                                    item.setText(actualUser);
-//                                                    item.setOpaque(false);
-//                                                    item.setContentAreaFilled(false);
-//                                                    item.setBorderPainted(false);
-//                                                    
-//                                                    gui.getUserOnline().add(item);
-                                                    gui.repaint();
-                                                    gui.validate();
-                                                }
-                                                
-                                            }else
-                                                gui.getServerChat().append(readInput+"\n");
-                                                
+                                            gui.getPMChat().append(readInput+"\n");
+                                            System.out.println("sending a message");    
 					}
 				}
 				if(hasMessage) {
@@ -122,7 +98,6 @@ public class MessageThread implements Runnable {
 	}finally{
                     try {
                         System.out.println("closing timeeee");
-                        users.remove(userName);
                         socket.close();
                         
                     } catch (IOException ex) {
@@ -132,4 +107,3 @@ public class MessageThread implements Runnable {
 
    }	
 }
-

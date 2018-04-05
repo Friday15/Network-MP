@@ -7,13 +7,11 @@ package client;
 
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.Socket;
-import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
 import javax.swing.JList;
-import javax.swing.JPanel;
 import javax.swing.JTextArea;
 
 
@@ -30,17 +28,18 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     private Thread guiThread;
     private Socket socket;
     private boolean sent = false;
+    DefaultListModel lm;
     /**
      * Creates new form ClientGUI
      */
     public ClientGUI(String username, String ipAddress, int portnum) {
         super(username);
         initComponents();
-        
+        lm = new DefaultListModel();
+        this.userOnline.setModel(lm);
         this.username = username;
         this.ipAddress = ipAddress;
         this.portnum = portnum;
-
         System.out.println("ClientGUI STAAAATO");
         
         guiThread = new Thread(this);
@@ -60,7 +59,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        chatfieldBox = new javax.swing.JTextField();
+        chatFieldBox = new javax.swing.JTextField();
         messageSend = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
         buttonLogout = new javax.swing.JButton();
@@ -70,12 +69,14 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         jScrollPane1 = new javax.swing.JScrollPane();
         serverChat = new javax.swing.JTextArea();
         jScrollPane2 = new javax.swing.JScrollPane();
-        userOnline = new javax.swing.JPanel();
+        userOnline = new javax.swing.JList<>(new DefaultListModel());
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         setName("ClientGUI"); // NOI18N
         setResizable(false);
+
+        chatFieldBox.setText(" ");
 
         messageSend.setText("Send");
         messageSend.addActionListener(new java.awt.event.ActionListener() {
@@ -116,8 +117,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         jScrollPane2.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane2.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 
-        userOnline.setAlignmentX(0.5F);
-        userOnline.setLayout(new javax.swing.BoxLayout(userOnline, javax.swing.BoxLayout.Y_AXIS));
+        userOnline.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane2.setViewportView(userOnline);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -146,7 +146,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
                                 .addGap(11, 11, 11)
                                 .addComponent(jLabel1)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 5, Short.MAX_VALUE))
-                            .addComponent(chatfieldBox, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(chatFieldBox, javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(jScrollPane1))
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
@@ -172,7 +172,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(buttonLogout)
-                    .addComponent(chatfieldBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(chatFieldBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(messageSend)
@@ -196,11 +196,15 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         /*
         jComboBox to select a username to chat with, then use that name to open PrivateMessageGUI();
         */
-        //String chosenUser = userOnline.getSelectedValue();
-        //new PrivateMessageGUI(chosenUser).setVisible(true);
+        String chosenUser = userOnline.getSelectedValue();
+        new PrivateMessageGUI(username, chosenUser,  socket).setVisible(true);
+        userOnline.clearSelection();
     }//GEN-LAST:event_privateMessageActionPerformed
 
     private void buttonLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonLogoutActionPerformed
+        userOnline.revalidate();
+        userOnline.repaint();
+        
         try {
             // TODO add your handling code here:
             //servGUI.globalServer.append(username + " logged out! \n");
@@ -214,7 +218,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     }//GEN-LAST:event_buttonLogoutActionPerformed
 
 
-    private void initializeClient(String username) {
+    private void initializeClient(String username){
     	try {
                 System.out.println("initializing");
                 //userOnline.append(username);
@@ -226,17 +230,17 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
 		MessageThread msgThread = new MessageThread(socket, username, this);
                 Thread servAccessThread = new Thread(msgThread);
                 
-                servAccessThread.start();
-		
+                servAccessThread.start();                   
                 
-                while(servAccessThread.isAlive()){
-
+                while(servAccessThread.isAlive()){                    
+                    
                     if(sent == true){                                   //should put a "marker" in front of the message so server can parse it and check where to send
                         StringBuilder sb = new StringBuilder();
                         sb.append("/a/");
-                        sb.append(chatfieldBox.getText());
+                        sb.append(chatFieldBox.getText());
+                        
                         msgThread.addNextMessage(sb.toString());   // /w/ (whisper) /g/ (group) or /a/ (all)
-                        chatfieldBox.setText("");
+                        chatFieldBox.setText("");
                         sent = false;
                     }
                 
@@ -248,6 +252,14 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
         }catch(InterruptedException e){
         
             e.printStackTrace();
+        }finally{
+                try {
+                    System.out.println("closing timeeee yeet");
+                    socket.close();
+                    
+                } catch (IOException ex) {
+                    Logger.getLogger(ClientGUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
         }
     	
     }
@@ -288,17 +300,22 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
 //        });
 //    }
 
-    public JTextArea getChatFieldBox(){
+    
+    
+    public JTextArea getServerChat(){
         return serverChat;
     }
     
-    public JPanel getUserOnline(){
+    public JList getUserOnline(){
         return userOnline;
     }
     
+    public DefaultListModel getListModel(){
+        return lm;
+    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton buttonLogout;
-    private javax.swing.JTextField chatfieldBox;
+    private javax.swing.JTextField chatFieldBox;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane1;
@@ -307,7 +324,7 @@ public class ClientGUI extends javax.swing.JFrame implements Runnable {
     private javax.swing.JComboBox<String> nameOfUsers;
     private javax.swing.JButton privateMessage;
     private javax.swing.JTextArea serverChat;
-    private javax.swing.JPanel userOnline;
+    private javax.swing.JList<String> userOnline;
     // End of variables declaration//GEN-END:variables
 
     @Override
